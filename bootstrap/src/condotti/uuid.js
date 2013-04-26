@@ -252,4 +252,8 @@ Condotti.add('condotti.uuid', function (C) {
   }
 }).call(this);
 
+if (module && module.exports) {
+    C.uuid = module.exports;
+}
+
 }, '0.0.1', { requires: [] });
