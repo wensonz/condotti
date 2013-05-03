@@ -94,20 +94,29 @@ Condotti.add('condotti.lang', function (C) {
      * @method merge
      * @param {Object} to the object to be merged to
      * @param {Object} from* 1-n objects to merge from
+     * @param {Boolean} overwritten if the data from latter object can overwrite
+     *                              the one from the formmer one when conflict
+     *                              is detected.
      */
     Language.prototype.merge = function () {
         var params = Array.prototype.slice.call(arguments, 0),
-            target = null;
+            target = null,
+            last = null,
+            overwritten = true;
         
-        if (params.length <= 0) {
+        if (params.length <= 1) {
             return;
         }
         
         target = params.shift();
+        last = params[params.length() - 1];
+        if (Boolean === C.lang.reflect.getObjectType(last)) {
+            overwritten = params.pop();
+        }
         
-        params.forEach(function (param) {
+        params.forEach(function (param, index) {
             var stack = [],
-                frame = { target: target, source: param },
+                frame = { paht: 'ROOT', target: target, source: param },
                 key = null,
                 value = null;
             
@@ -116,13 +125,32 @@ Condotti.add('condotti.lang', function (C) {
                     if (!frame.source.hasOwnProperty(key)) {
                         continue;
                     }
+                    
                     value = frame.source[key];
-                    if ((key in frame.target) && 
-                        C.lang.reflect.isPlainObject(value)) {
-                        stack.push({ target: frame.target[key], source: value });
-                    } else {
+                    
+                    if (!frame.target[key]) {
                         frame.target[key] = value;
+                        continue;
                     }
+                    
+                    if (C.lang.reflect.isPlainObject(value)) {
+                        stack.push({ 
+                            path: frame.path + '.' + key, 
+                            target: frame.target[key], 
+                            source: value 
+                        });
+                        continue;
+                    }
+                    
+                    if (!overwritten) {
+                        throw new Error('Confliction has been detected on ' +
+                                        'property ' + frame.path + 
+                                        ' when merging the ' + (index + 1) + 
+                                        'th param into the target');
+                    }
+                    
+                    // Overwrite
+                    frame.target[key] = value;
                 }
                 
                 frame = stack.pop(); // deep first search to ensure that the
