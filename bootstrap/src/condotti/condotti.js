@@ -117,6 +117,9 @@ Condotti.add = function (name, fn, version, meta) {
     
     // TODO: 1. add multi version support
     //       2. add JAVA-like package namespace support
+    //       3. generate module name when loading, instead of hard-coded in the
+    //          source, which is inconvenient if the source file has to be moved
+    //          to another directory
     Condotti.loaded_[name] = {
         name: name,
         fn: fn,
@@ -221,7 +224,6 @@ Condotti.prototype.use = function () {
     var params = Array.prototype.slice.call(arguments, 0), // Convert
                                                            // `arguments` to
                                                            // array
-        param = null,
         callback = null,
         C = this,
         requires = [],
@@ -419,7 +421,7 @@ Condotti.prototype.calculate_ = function (name) {
             
         requires = C.loaded_[current].meta.requires || [];
         length = requires.length;
-        if (0 == length) {
+        if (0 === length) {
             C.debug('Module ' + current + ' does not depend on other modules');
         } else {
             C.debug('Dependencies of module ' + current + 
