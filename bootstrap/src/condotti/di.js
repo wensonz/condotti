@@ -89,6 +89,11 @@ Condotti.add('condotti.di', function (C) {
                 }
                 
                 params = self.config_[current].params;
+                if (!params) {
+                    self.logger_.warn('There is no user-specified params for ' +
+                                      'this ' + name + ', default [] is used');
+                    params = [];
+                }
                 
                 return Object.keys(params).filter(function (name) {
                         return 'reference' in params[name];
@@ -97,7 +102,7 @@ Condotti.add('condotti.di', function (C) {
                     return params[name].reference;
                 });
             };
-            
+            // TODO: add logging here
             dependencies = C.algorithm.sorting.topology(name, next);
             
             dependencies.forEach(function (dependency) {
@@ -137,7 +142,14 @@ Condotti.add('condotti.di', function (C) {
      * @param {Object} config the new specified config object
      */
     DottiFactory.prototype.configure = function (config) {
+        this.logger_.debug('Merging the original config ' + 
+                           C.lang.reflect.inspect(this.config_) + 
+                           ' with user-specified new config ' +
+                           C.lang.reflect.inspect(config) + ' ...');
+                           
         C.lang.merge(this.config_, config);
+        this.logger_.debug('Current config for this dotti factory after ' +
+                           'merging: ' + C.lang.reflect.inspect(this.config_));
     };
     
     /**
@@ -158,14 +170,21 @@ Condotti.add('condotti.di', function (C) {
             message = null;
         
         config = this.config_[name];
-        // TODO: check if config exists
-        
+        // TODO: 1. check if config exists
+        //       2. add native type support
+        /*
         if (config.native) {
             // TODO: create object of native types
         }
+        */
         
         // TODO: check if config.type exists
         type = C.namespace(config.type);
+        
+        if (!type) {
+            throw new TypeError('Required type ' + config.type + 
+                                ' does not exist in current Condotti instance');
+        }
         
         Object.keys(config.params).sort().forEach(function (key) {
             
@@ -181,7 +200,8 @@ Condotti.add('condotti.di', function (C) {
                 params[index] = param.value;
             } else {
                 // params[index] = undefined;
-                throw new TypeError();
+                throw new TypeError('Unsupported param type. Now only "value"' +
+                                    ' and "reference" are supported.');
             }
             
             /* } else if ('Date' === param.type) {
@@ -199,7 +219,7 @@ Condotti.add('condotti.di', function (C) {
                           C.lang.reflect.getObjectType(type)
                       ) + ' is found.';
                       
-            this.logger_.error(message);
+            // this.logger_.error(message);
             throw new TypeError(message);
         }
         
