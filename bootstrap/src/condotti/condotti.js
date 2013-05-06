@@ -141,9 +141,11 @@ Condotti.add = function (name, fn, version, meta) {
  *
  * @method namespace
  * @param {String} namespace the namespace to be created
- * @return {Object} the namespace object created
+ * @param {Boolean} create whether create the required obejct that does not
+ *                         exist
+ * @return {Object} the object found or created
  */
-Condotti.prototype.namespace = function (namespace) {
+Condotti.prototype.namespace = function (namespace, create) {
     var C = this,
         tokens = null,
         current = this,
@@ -156,11 +158,22 @@ Condotti.prototype.namespace = function (namespace) {
         return C;
     }
     
+    if (undefined === create) {
+        create = true;
+    }
+    
     tokens = namespace.split('.');
     length = tokens.length;
     for (index = 0; index < length; index += 1) {
         token = tokens[index];
-        current[token] = current[token] || {};
+        if (!current[token]) {
+            if (create) {
+                current[token] = {};
+            } else {
+                throw new Error();
+            }
+        }
+        
         current = current[token];
     }
     

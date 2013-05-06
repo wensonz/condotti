@@ -155,28 +155,38 @@ Condotti.add('condotti.di', function (C) {
             params = [],
             config = null,
             self = this,
-            message = null,
-            last = 0;
+            message = null;
         
         config = this.config_[name];
+        // TODO: check if config exists
+        
+        if (config.native) {
+            // TODO: create object of native types
+        }
+        
+        // TODO: check if config.type exists
         type = C.namespace(config.type);
         
         Object.keys(config.params).sort().forEach(function (key) {
             
-            var index = parseInt(key),
+            var index = parseInt(key, 10),
                 param = config.params[key];
             
+            // Now only two types of param are supported: value and reference
             if (!param) {
                 params[index] = undefined;
-            } else if ('reference' in param) {
+            } else if (param.reference) {
                 params[index] = self.cache_[param.reference];
-            } else if ('Date' === param.type) {
-                params[index] = new Date(Date.parse(param.value));
             } else if (param.value) {
                 params[index] = param.value;
             } else {
-                params[index] = undefined;
+                // params[index] = undefined;
+                throw new TypeError();
             }
+            
+            /* } else if ('Date' === param.type) {
+                params[index] = new Date(Date.parse(param.value));
+            */
         });
         
         // Create the object without 'new', since the params for the constructor

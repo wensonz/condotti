@@ -109,7 +109,7 @@ Condotti.add('condotti.lang', function (C) {
         }
         
         target = params.shift();
-        last = params[params.length() - 1];
+        last = params[params.length - 1];
         if (Boolean === C.lang.reflect.getObjectType(last)) {
             overwritten = params.pop();
         }
@@ -128,12 +128,13 @@ Condotti.add('condotti.lang', function (C) {
                     
                     value = frame.source[key];
                     
-                    if (!frame.target[key]) {
+                    if (!frame.target.hasOwnProperty(key)) {
                         frame.target[key] = value;
                         continue;
                     }
                     
-                    if (C.lang.reflect.isPlainObject(value) && C.lang.reflect.isPlainObject(target[key])) {
+                    if (C.lang.reflect.isPlainObject(value) && 
+                        C.lang.reflect.isPlainObject(target[key])) {
                         stack.push({ 
                             path: frame.path + '.' + key, 
                             target: frame.target[key], 
