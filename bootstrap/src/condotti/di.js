@@ -179,9 +179,9 @@ Condotti.add('condotti.di', function (C) {
         */
         
         // TODO: check if config.type exists
-        type = C.namespace(config.type);
-        
-        if (!type) {
+        try {
+            type = C.namespace(config.type);
+        } catch (e) {
             throw new TypeError('Required type ' + config.type + 
                                 ' does not exist in current Condotti instance');
         }
