@@ -235,6 +235,60 @@ Condotti.add('condotti.validators', function (C) {
     C.namespace('validators').NotEmptyValidator = NotEmptyValidator;
     
     /**
+     * This OptionalValidator is designed to ensure that the value of the 
+     * passed-in target has to pass the specified validations if and only if 
+     * the target exists. (target === undefined)
+     * 
+     * @class OptionalValidator
+     * @constructor
+     * @extends Validator
+     * @param {String} name the name of the validator
+     * @param {Array} validations an array validators with which the target is
+     *                            to be validated if it exists(!== undefined)
+     */
+    function OptionalValidator (name, validations) {
+        /* inheritance */
+        this.super(name);
+        
+        /**
+         * the validation collection to be used on the passed-in target
+         * 
+         * @property validations_
+         * @type Object
+         */
+        this.validations_ = validations;
+        
+        /* initialize */
+        // TODO: check validations is an instance of validator if it's not an
+        //       array
+        if (!Array.isArray(validations)) {
+            this.validations_ = [ validations ];
+        }
+        
+    }
+    
+    C.lang.inherit(OptionalValidator, Validator);
+    
+    /**
+     * Validate whether the input can pass through all the validations required
+     * when it exists (not undefined)
+     * 
+     * @method validate
+     * @param {Object} target the target object to be validated
+     */
+    OptionalValidator.prototype.validate = function (target) {
+        if (target === undefined) {
+            return;
+        }
+        
+        this.validations_.forEach(function (validator) {
+            validator.validate(target);
+        });
+    };
+    
+    C.namespace('validators').OptionalValidator = OptionalValidator;
+    
+    /**
      * This ObjectValidator is designed to validate the properties of the 
      * passed-in target can pass through the specified validations.
      * 
@@ -245,11 +299,7 @@ Condotti.add('condotti.validators', function (C) {
      * @param {Object} validations the validations to be used on the passed-in
      *                             target. The structure of this param is like
      *                             {
-     *                                 'key1.sub_key2': [{ 
-     *                                     validator: ${class name of validator},
-     *                                     params: [] // params to initialize 
-     *                                                // the validator
-     *                                 }]
+     *                                 'key1.sub_key2': [validator instances]
      *                             }
      *                             Note that this validator only validates the
      *                             properties of the passed-in target, or the
@@ -271,71 +321,15 @@ Condotti.add('condotti.validators', function (C) {
         this.validations_ = validations;
         
         /**
-         * The validators generated to validate the passed-in target according
-         * to the user-specified validations
+         * The logger instance for this validator
          * 
-         * @property validators_
-         * @type Object
-         * @default {}
+         * @property logger_
+         * @type Logger
          */
-        this.validators_ = {};
-        
-        
-        /* initialize */
-        this.initialize_();
+        this.logger_ = C.logging.getObjectLogger(this);
     }
     
     C.lang.inherit(ObjectValidator, Validator);
-    
-    /**
-     * Initialize the validators required
-     * 
-     * @method initialize_
-     */
-    ObjectValidator.prototype.initialize_ = function () {
-        var path = null,
-            value = null;
-        
-        for (path in this.validations_) {
-            
-            value = this.validations_[path];
-            if (value && !Array.isArray(value)) {
-                throw new TypeError(
-                    'Validations for path ' + path + 
-                    ' is expected to be an array, but ' + 
-                    C.lang.reflect.getFunctionName(
-                        C.lang.reflect.getObjectType(value)
-                    ) + ' is found.'
-                );
-            }
-            
-            this.validators_[path] = value.map(function (item) {
-                var type = null,
-                    validator = null;
-                
-                type = C.validators[item.validator];
-                if (!type) {
-                    throw new TypeError(
-                        'Required validator type ' + item.validator + 
-                        ' for path ' + path + ' does not exist'
-                    );
-                }
-                
-                if (!Array.isArray(item.params) || (item.params.length === 0)) {
-                    throw new TypeError(
-                        'Params for the validator of ' + item.validator + 
-                        ' for path ' + path + ' is expected to be an array ' +
-                        'with at least one param, but ' +
-                        C.lang.reflect.inspect(item.params) + ' is found.'
-                    );
-                }
-                
-                validator = Object.create(type.prototype);
-                type.apply(validator, item.params);
-                return validator;
-            });
-        }
-    };
     
     /**
      * Validate whether the input can pass through all the validations required
@@ -347,14 +341,19 @@ Condotti.add('condotti.validators', function (C) {
         var path = null,
             property = null;
         
-        for (path in this.validators_) {
+        for (path in this.validations_) {
             try {
                 property = C.namespace.call(target, path, false);
             } catch (e) {
-                throw new C.errors.ValidationFailedError(e.message);
+                this.logger_.warn('Looking up property ' + path + 
+                                  ' in target ' + 
+                                  C.lang.reflect.inspect(target) + 
+                                  ' failed. Error: '+ e.message);
+                                  
+                property = undefined;
             }
             
-            this.validators_[path].forEach(function (validator) {
+            this.validations_[path].forEach(function (validator) {
                 validator.validate(property);
             });
         }
