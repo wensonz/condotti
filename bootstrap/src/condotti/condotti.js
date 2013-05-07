@@ -173,11 +173,9 @@ Condotti.prototype.namespace = function (namespace, create) {
         token = tokens[index];
         
         if (!create && !(token in current)) {
-            C.warn('Object is expected to be under namespace ' + 
-                   tokens.slice(0, index + 1).join('.') + 
-                   ', however it does not exist');
-                   
-            return null;
+            throw new TypeError('Object is expected to be under namespace ' + 
+                                tokens.slice(0, index + 1).join('.') + 
+                                ', however it does not exist');
         }
         
         current[token] = current[token] || {};
