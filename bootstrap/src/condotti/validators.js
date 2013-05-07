@@ -247,6 +247,12 @@ Condotti.add('condotti.validators', function (C) {
      *                            to be validated if it exists(!== undefined)
      */
     function OptionalValidator (name, validations) {
+        
+        if (C.lang.reflect.getObjectType(name) !== String) {
+            validations = name;
+            name = 'optional';
+        }
+        
         /* inheritance */
         this.super(name);
         
@@ -309,6 +315,12 @@ Condotti.add('condotti.validators', function (C) {
      *                             target is separated by '.'
      */
     function ObjectValidator (name, validations) {
+        
+        if (C.lang.reflect.getObjectType(name) !== String) {
+            validations = name;
+            name = 'object';
+        }
+        
         /* inheritance */
         this.super(name);
         
