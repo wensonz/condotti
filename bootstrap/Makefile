@@ -10,8 +10,8 @@ CONDOTTI = \
 	"$(SRC)/condotti/logging.js" \
 	"$(SRC)/condotti/algorithm.js" \
 	"$(SRC)/condotti/di.js" \
-    "$(SRC)/condotti/validators.js" \
-    "$(SRC)/condotti/uuid.js"
+	"$(SRC)/condotti/validators.js" \
+	"$(SRC)/condotti/uuid.js"
 
 WEB = \
 	"$(SRC)/web/core.js" \
