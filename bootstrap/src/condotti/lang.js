@@ -134,7 +134,7 @@ Condotti.add('condotti.lang', function (C) {
                     }
                     
                     if (C.lang.reflect.isPlainObject(value) && 
-                        C.lang.reflect.isPlainObject(target[key])) {
+                        C.lang.reflect.isPlainObject(frame.target[key])) {
                         stack.push({ 
                             path: frame.path + '.' + key, 
                             target: frame.target[key], 
