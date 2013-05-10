@@ -74,7 +74,15 @@ Condotti.add('condotti.di', function (C) {
             next = null,
             self = this;
             
-        if (!this.cache_[name]) {
+        if (!this.cache_.hasOwnProperty(name)) {
+            
+            if (!this.config_[name]) {
+                this.logger_.warn('Configuration for object ' + name + 
+                                  ' does not exist');
+                this.cache_[name] = null;
+                return null;
+            }
+            
             next = function (current) {
                 var params = null;
                 
@@ -84,8 +92,10 @@ Condotti.add('condotti.di', function (C) {
                 }
                 
                 if (!self.config_[current]) {
-                    throw new ReferenceError('Configuration for object ' + 
-                                             current + ' does not exist');
+                    self.logger_.warn('Configuration for object ' + current + 
+                                      ' does not exist');
+                    // self.cache_[current] = null;
+                    return [];
                 }
                 
                 params = self.config_[current].params;
@@ -106,7 +116,7 @@ Condotti.add('condotti.di', function (C) {
             dependencies = C.algorithm.sorting.topology(name, next);
             
             dependencies.forEach(function (dependency) {
-                if (!self.cache_[dependency]) {
+                if (!self.cache_.hasOwnProperty(dependency)) {
                     self.create_(dependency);
                 }
             });
@@ -170,6 +180,12 @@ Condotti.add('condotti.di', function (C) {
             message = null;
         
         config = this.config_[name];
+        if (!config) {
+            this.logger_.warn('Configuration for object ' + name + 
+                              ' does not exist');
+            this.cache_[name] = null;
+            return;
+        }
         // TODO: 1. check if config exists
         //       2. add native type support
         /*
