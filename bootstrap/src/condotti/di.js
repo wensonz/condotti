@@ -205,7 +205,8 @@ Condotti.add('condotti.di', function (C) {
         Object.keys(config.params).sort().forEach(function (key) {
             
             var index = parseInt(key, 10),
-                param = config.params[key];
+                param = config.params[key],
+                message = null;
             
             // Now only two types of param are supported: value and reference
             if (!param) {
@@ -216,8 +217,11 @@ Condotti.add('condotti.di', function (C) {
                 params[index] = param.value;
             } else {
                 // params[index] = undefined;
-                throw new TypeError('Unsupported param type. Now only "value"' +
-                                    ' and "reference" are supported.');
+                message = 'Unsupported param type. Now only "value"' +
+                          ' and "reference" are supported.';
+                self.logger_.debug(message);
+                self.logger_.debug('Param: ' + C.lang.reflect.inspect(param));
+                throw new TypeError(message);
             }
             
             /* } else if ('Date' === param.type) {
