@@ -15,8 +15,9 @@ Condotti.add('condotti.di', function (C) {
      * @class DottiFactory
      * @constructor
      * @param {Object} config the config for this dotti factory
+     * @param {String} id the identifier of this factory instance in itself
      */
-    function DottiFactory (config) {
+    function DottiFactory (config, id) {
         /**
          * The config object for this dotti factory.
          *
@@ -40,6 +41,15 @@ Condotti.add('condotti.di', function (C) {
         this.config_ = config;
         
         /**
+         * The identifier of this factory instance in itself
+         * 
+         * @property id_
+         * @type String
+         * @default 'dotti-factory'
+         */
+        this.id_ = id || 'dotti-factory';
+        
+        /**
          * The logger instance
          * 
          * @property logger_
@@ -56,6 +66,8 @@ Condotti.add('condotti.di', function (C) {
          */
         this.cache_ = {};
         
+        /* initialize */
+        this.set(this.id_, this);
     }
     
     /**
