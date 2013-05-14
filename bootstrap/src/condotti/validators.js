@@ -339,9 +339,30 @@ Condotti.add('condotti.validators', function (C) {
          * @type Logger
          */
         this.logger_ = C.logging.getObjectLogger(this);
+        
+        /* initialize */
+        this.initialize_();
     }
     
     C.lang.inherit(ObjectValidator, Validator);
+    
+    /**
+     * Initialize this validator
+     * 
+     * @method initialize_
+     */
+    ObjectValidator.prototype.initialize_ = function () {
+        var key = null,
+            value = null;
+        
+        for (key in this.validations_) {
+            value = this.validations_[key];
+            
+            if (!Array.isArray(value)) {
+                this.validations_[key] = [ value ];
+            }
+        }
+    };
     
     /**
      * Validate whether the input can pass through all the validations required

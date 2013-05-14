@@ -198,10 +198,11 @@ Condotti.add('condotti.lang', function (C) {
      * @return the cloned object
      */
     Language.prototype.clone = function(source, deep) {
+        /*
         // now deep copy is not supported
         var cloned = null,
             key = null;
-
+        
         // TODO: support other data types and deep copy
         if ('object' !== typeof source) {
             throw new TypeError('Method \'clone\' only clones objects, ' +
@@ -216,6 +217,10 @@ Condotti.add('condotti.lang', function (C) {
         }
         
         return cloned;
+        */
+        
+        // TODO: implement a more effective one
+        return JSON.parse(JSON.stringify(source));
     };
     
     C.lang = new Language();
