@@ -38,7 +38,6 @@ Condotti.add('condotti.reflect', function (C) {
      *                   is returned.
      */
     Reflect.prototype.isPlainObject = function (object) {
-        var key = null;
         
         if (!object || this.getObjectType(object) !== Object) {
             return false;
@@ -56,7 +55,7 @@ Condotti.add('condotti.reflect', function (C) {
             return false;
         }
         
-        for (key in object) {}
+        for (var key in object) {}
         
         return key === undefined || 
                Object.prototype.hasOwnProperty.call(object, key);
