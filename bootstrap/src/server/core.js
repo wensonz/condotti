@@ -13,6 +13,14 @@ Condotti.add('condotti.server.core', function (C) {
      * @type Object
      */
     C.natives = require('natives');
+    
+    /**
+     * The node.js version of events
+     * 
+     * @property events
+     * @type Object
+     */
+    C.events = C.natives.events;
  
     /**
      * The process object
