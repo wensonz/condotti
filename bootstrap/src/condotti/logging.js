@@ -348,7 +348,7 @@ Condotti.add('condotti.logging', function (C, config) {
      */
     StepLogger.prototype.start = function (message) {
         this.message_ = message;
-        this.logger_.debug(message + ' ...');
+        this.logger_.debug('[ START ] ' + message + ' ...');
     };
     
     /**
@@ -365,7 +365,7 @@ Condotti.add('condotti.logging', function (C, config) {
             return;
         }
 
-        message = this.message_ + ' succeed.';
+        message = '[ OK ] ' + this.message_ + ' succeed.';
         this.message_ = null;
 
         if (result) {
@@ -385,7 +385,8 @@ Condotti.add('condotti.logging', function (C, config) {
         if (!this.message_) {
             return;
         }
-        this.logger_.error(this.message_ + ' failed. Error: ' + 
+        this.logger_.error('[ !! ] ' + this.message_ + 
+                           ' failed. Error: ' + 
                            C.lang.reflect.inspect(error));
         this.message_ = null;
     };
