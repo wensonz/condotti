@@ -195,7 +195,7 @@ Condotti.prototype.namespace = function (namespace, create) {
  */
 Condotti.prototype.configure = function (config) {
     var C = this;
-    // C.lang.merge(C.config_, config);
+    C.lang.merge(C.config_, config);
     // TODO: update the Condotti instance after the configuration is changed?
     return C;
 };

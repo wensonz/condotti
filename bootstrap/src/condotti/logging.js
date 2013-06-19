@@ -327,9 +327,9 @@ Condotti.add('condotti.logging', function (C, config) {
          * 
          * @property message_
          * @type String
-         * @default ''
+         * @default null 
          */
-        this.message_ = '';
+        this.message_ = null;
         
         /**
          * The logger instance to complete the logging functionality
@@ -359,7 +359,15 @@ Condotti.add('condotti.logging', function (C, config) {
      *                        or undefined.
      */
     StepLogger.prototype.done = function (result) {
-        var message = this.message_ + ' succeed.';
+        var message = null;
+
+        if (!this.message_) {
+            return;
+        }
+
+        message = this.message_ + ' succeed.';
+        this.message_ = null;
+
         if (result) {
             message += ' Result: ' + C.lang.reflect.inspect(result);
         }
@@ -374,8 +382,12 @@ Condotti.add('condotti.logging', function (C, config) {
      * @param {Error} error the error causes this step fail
      */
     StepLogger.prototype.error = function (error) {
+        if (!this.message_) {
+            return;
+        }
         this.logger_.error(this.message_ + ' failed. Error: ' + 
                            C.lang.reflect.inspect(error));
+        this.message_ = null;
     };
     
     L.StepLogger = StepLogger;

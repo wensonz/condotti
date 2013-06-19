@@ -45,9 +45,9 @@ Condotti.add('condotti.di', function (C) {
          * 
          * @property id_
          * @type String
-         * @default 'dotti-factory'
+         * @default 'dotti'
          */
-        this.id_ = id || 'dotti-factory';
+        this.id_ = id || 'dotti';
         
         /**
          * The logger instance
