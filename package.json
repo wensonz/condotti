@@ -1,0 +1,20 @@
+{
+    "name": "condotti",
+    "version": "0.0.1",
+    "description": "A light-weight javascript modular framework inspired by YUI3 and RequireJS which supports both browser and node.js",
+    "main": "bootstrap/build/condotti.js",
+    "dependencies": {
+        "log4js": "*",
+        "natives": "*"
+    },
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/wensonz/condotti.git"
+    },
+    "scripts": {
+        "preinstall": "make -C bootstrap clean && make -C bootstrap server"
+    },
+    "keywords": ["modular", "YUI", "RequireJS"],
+    "author": "Wenson Zhou",
+    "license": "MIT"
+}
