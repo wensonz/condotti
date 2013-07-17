@@ -58,7 +58,7 @@ Condotti.add('condotti.server.core', function (C) {
     C.lang.reflect.inspect = function (object) {
 
         if (C.lang.reflect.getObjectType(object) === Buffer) {
-            return '<Buffer: ' + object.toString('hex') + '>';
+            return 'Buffer: ' + object.toString('hex');
         }
         return inspect.call(C.lang.reflect, object);
     };

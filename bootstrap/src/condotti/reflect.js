@@ -103,28 +103,37 @@ Condotti.add('condotti.reflect', function (C) {
             length = 0;
             
         if (name in { 'Number': 1, 'Boolean': 1, 'Date': 1 }) {
-            return '<' + name + ': ' + object.toString() + '>';
+            return object.toString();
+            // return '<' + name + ': ' + object.toString() + '>';
         } else if ('String' === name) {
-            return '<' + name + ': \'' + object + '\'>';
+            return '"' + object + '"';
+            // return '<' + name + ': \'' + object + '\'>';
         } else if (undefined === object) {
-            return '<Undefined>';
+            return 'undefined';
+            // return '<Undefined>';
         } else if (null === object) {
-            return '<Object: null>';
+            return 'null';
+            // return '<Object: null>';
         } else if (object instanceof Error) {
-            return '<' + object.name + ': \'' + object.message + '\'>';
+            return object.name + ': ' + object.message;
+            // return '<' + object.name + ': \'' + object.message + '\'>';
         } else if (Function === type) {
-            return '<Function: ' + this.getFunctionName(object) + '>';
+            return this.getFunctionName(object) + '()';
+            // return '<Function: ' + this.getFunctionName(object) + '>';
         } else if (Array === type) {
             if (object.length > 0) {
                 data = object.map(function (item) { 
                     return self.inspect(item);
                 }).join(', ');
-                
+                /*
                 return '<Array of ' + 
                        this.getFunctionName(this.getObjectType(object[0])) +
                        ': [' + data + '] >';
+                */
+                return '[' + data + ']';
             }
-            return '<Array: []>';
+            return '[]';
+            // return '<Array: []>';
             
         } else if (Object === type) {
             data = data || [];
@@ -133,16 +142,19 @@ Condotti.add('condotti.reflect', function (C) {
                 if (object.hasOwnProperty(key)) {
                     length += 1;
                     value = object[key];
-                    data.push('\'' + key + '\': ' + this.inspect(value));
+                    data.push('"' + key + '": ' + this.inspect(value));
                 }
             }
-            
-            return '<Object: {' + data.join(', ') + '} >';
+            return '{' + data.join(', ') + '}';
+            // return '<Object: {' + data.join(', ') + '} >';
         }
         
         // fall default
+        return name + ': ' + object.toString();
+        /*
         return '<' + this.getFunctionName(this.getObjectType(object)) + ': ' + 
                object.toString() + '>';
+        */
     };
     
     /**
