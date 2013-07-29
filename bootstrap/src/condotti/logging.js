@@ -323,14 +323,14 @@ Condotti.add('condotti.logging', function (C, config) {
      */
     function StepLogger (logger) {
         /**
-         * The message used to construct the log
-         * 
-         * @property message_
+         * The id of the step
+         *
+         * @property id_
          * @type String
-         * @default null 
+         * @default null
          */
-        this.message_ = null;
-        
+        this.id_ = null;
+
         /**
          * The logger instance to complete the logging functionality
          * 
@@ -347,8 +347,11 @@ Condotti.add('condotti.logging', function (C, config) {
      * @param {String} message the descriptive message about the step
      */
     StepLogger.prototype.start = function (message) {
-        this.message_ = message;
-        this.logger_.debug('[ START ] ' + message + ' ...');
+        var tokens = null;
+        tokens = C.uuid.v4().split('-');
+        this.id_ = tokens[0] + '-' + tokens[tokens.length - 1];
+
+        this.logger_.debug('[' + this.id_ + '] [ START ] ' + message + ' ...');
     };
     
     /**
@@ -361,12 +364,12 @@ Condotti.add('condotti.logging', function (C, config) {
     StepLogger.prototype.done = function (result) {
         var message = null;
 
-        if (!this.message_) {
+        if (!this.id_) {
             return;
         }
 
-        message = '[ OK ] ' + this.message_ + ' succeed.';
-        this.message_ = null;
+        message = '[' + this.id_ + '] [ OK ]';
+        this.id_ = null;
 
         if (result) {
             message += ' Result: ' + C.lang.reflect.inspect(result);
@@ -382,13 +385,13 @@ Condotti.add('condotti.logging', function (C, config) {
      * @param {Error} error the error causes this step fail
      */
     StepLogger.prototype.error = function (error) {
-        if (!this.message_) {
+        if (!this.id_) {
             return;
         }
-        this.logger_.error('[ !! ] ' + this.message_ + 
-                           ' failed. Error: ' + 
+        
+        this.logger_.error('[' + this.id_ + '] [ !! ] Error: ' + 
                            C.lang.reflect.inspect(error));
-        this.message_ = null;
+        this.id_ = null;
     };
     
     L.StepLogger = StepLogger;
