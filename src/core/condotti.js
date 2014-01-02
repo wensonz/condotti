@@ -20,26 +20,17 @@ function Condotti (config) {
     
     var C = this;
     /**
-     * The config object
-     * 
+     * Config object for this Condotti instance
+     *
      * @property config_
      * @type Object
-     * @private
      */
     C.config_ = config || {};
     
     /**
-     * The loaded modules
-     *
-     * @property loaded_
-     * @type Object
-     */
-    C.loaded_ = Condotti.loaded_;
-    
-    /**
      * The calcualted module dependencies
      *
-     * @property calculatedDependencies_
+     * @property dependencies_
      * @type Object
      */
     C.dependencies_ = {};
@@ -72,7 +63,7 @@ function Condotti (config) {
     C.attach_(Condotti['CORE-MODULES']);
     
     C.logger_ = C.logging.getObjectLogger(C);
-    C.loader_ = new C.loaders.Loader(C.config_.loader);
+    C.loader_ = new C.loader.Loader(C.config_.loader);
 }
 
 /********************************************************************
@@ -84,11 +75,11 @@ function Condotti (config) {
 /**
  * Loaded module colletion inside the Condotti global
  *
- * @property loaded_
+ * @property modules
  * @type Object
  * @static
  */
-Condotti.loaded_ = {};
+Condotti.modules = {};
 
 /**
  * Add a module with the Condotti global.
@@ -102,16 +93,7 @@ Condotti.loaded_ = {};
  * @param {Object} meta the optional config data for this module
  * @return {Function} the Condotti global.
  */
-Condotti.add = function (name, fn, version, meta) {
-    
-    if (name in Condotti.loaded_) {
-        if (Condotti.DuplicatedModuleError) {
-            throw new Condotti.DuplicatedModuleError(name);
-        } else {
-            throw new Error('Duplication of the module ' + name + 
-                            ' has been detected.');
-        }
-    }
+Condotti.add = function add(name, fn, version, meta) {
     
     meta = meta || {};
     
@@ -120,7 +102,7 @@ Condotti.add = function (name, fn, version, meta) {
     //       3. generate module name when loading, instead of hard-coded in the
     //          source, which is inconvenient if the source file has to be moved
     //          to another directory
-    Condotti.loaded_[name] = {
+    Condotti.modules[name] = {
         name: name,
         fn: fn,
         version: version,
@@ -148,7 +130,7 @@ Condotti.add = function (name, fn, version, meta) {
  *                         exist
  * @return {Object} the object found or created
  */
-Condotti.prototype.namespace = function (namespace, create) {
+Condotti.prototype.namespace = function namespace(namespace, create) {
     var C = this,
         tokens = null,
         current = this,
@@ -157,25 +139,22 @@ Condotti.prototype.namespace = function (namespace, create) {
         token = null;
     
     if (!namespace || !namespace.length) {
-        C.debug('Namespace is not a string or is empty.');
         return C;
     }
     
-    if (undefined === create) {
-        create = true;
-    }
+    // missing object is to be created by default
+    create = (1 === arguments.length) ? true : !!create;
     
     tokens = namespace.split('.');
     length = tokens.length;
-    
+    current = this;
     for (index = 0; index < length; index += 1) {
         
         token = tokens[index];
-        
-        if (!create && !(token in current)) {
-            throw new TypeError('Object is expected to be under namespace ' + 
+        if (!(create or token in current)) {
+            throw new TypeError('Object of namespace ' + 
                                 tokens.slice(0, index + 1).join('.') + 
-                                ', however it does not exist');
+                                ' can not be found');
         }
         
         current[token] = current[token] || {};
@@ -183,21 +162,6 @@ Condotti.prototype.namespace = function (namespace, create) {
     }
     
     return current;
-};
-
-/**
- * Configure the Condotti instance via merging the existing config object and
- * the passed in one.
- *
- * @method configure
- * @param {Object} config the new config to be applied
- * @return {Condotti} the Condotti instance
- */
-Condotti.prototype.configure = function (config) {
-    var C = this;
-    C.lang.merge(C.config_, config);
-    // TODO: update the Condotti instance after the configuration is changed?
-    return C;
 };
 
 
@@ -217,159 +181,92 @@ Condotti.prototype.configure = function (config) {
  *                            has the required functionality. 
  * @return {Condotti} the Condotti instance
  */
-Condotti.prototype.use = function () {
+Condotti.prototype.use = function use() {
     
     var params = Array.prototype.slice.call(arguments, 0), // Convert
                                                            // `arguments` to
                                                            // array
         callback = null,
-        C = this,
-        requires = [],
-        stack = [],
-        next = null,
-        done = null,
-        filter = null;
+        C = this;
     
-    if (!params.length) {
-        C.warn('No module is specified to be used.');
-        return;
+    
+    if (!params.length) return;
+    
+    callback = function () {}; // by default a dummy function to call
+    if (C.lang.isFunction(params[length - 1])) {
+        callback = C.lang.async(params.pop()); // remove the callback from 
+                                               // module list
     }
     
-    callback = params[params.length - 1];
-    if (C.lang.reflect.isFunction(callback)) {
-        params.pop(); // remove the callback from module list
-        callback = C.lang.async(callback);
-    } else {
-        C.debug('Callback function is not specified, empty one is used.');
-        callback = function () {}; // in order to be called anyway
-    }
+    if (!params.length) return;
     
     if (Array.isArray(params[0])) {
         params = params[0]; // only two scenarios are supported: 
                             // use([m1, m2], cb) or use(m1, m2, cb)
-        C.debug('The first parameter is found to be an array of ' + 
-                'module names: ' + C.lang.reflect.inspect(params));
     }
     
-    if (!params.length) {
-        C.warn('The module to be used is specified, but the callback function' + 
-               ' is found.');
-        callback(null, C);
-        return;
-    }
-    // TODO: Wildcard can not be used in the module names to be used, because
-    //       in some circumstance, such as web, modules under specified path
-    //       can not be browsed/iterated      
-    stack.push(params);
+    params = C.filter_(params, Condotti.modules);
+    if (!params.length) return;
     
-    done = function (error) {
-        var dependencies = [];
+    C.loader_.require(params, function next(error) {
+        var dependencies = [],
+            index = 0,
+            length = 0;
         
         if (error) {
-            C.debug('Modules ' + C.lang.reflect.inspect(requires) + 
-                    ' are failed to be loaded by the loader. Error: ' +
-                    C.lang.reflect.inspect(error));
-            callback(error, C);
+            callback(error);
             return;
         }
         
-        C.debug('Modules ' + C.lang.reflect.inspect(requires) + 
-                ' are loaded successfully. Dependencies are gonna be ' +
-                'collected.');
-        
-        //
-        // Now that the required modules have been loaded successfully, it's
-        // time to load their dependencies.
-        requires.forEach(function (name, index) {
-            var meta = null;
-            if (!(name in C.loaded_)) {
-                C.debug('Module ' + name + ' is supposed to be loaded ' +
-                        'successfully in this round, but it isn\'t.');
-                throw new C.errors.ModuleNotLoadedError(name);
-            }
-            
-            meta = C.loaded_[name].meta;
-            if (meta.requires && Array.isArray(meta.requires) &&
-                meta.requires.length) { // TODO: throw error if meta.requires
-                                        // is not an array?
-                dependencies = dependencies.concat(meta.requires);
-            }
-        });
-        
-        if (!dependencies.length) {
-            C.debug('No dependency is found for the current loaded modules, ' +
-                    'start next round of loading');
-        } else {
-            C.debug('Raw dependencies of the current loaded modules ' + 
-                    'are gonna be loaded next time: ' + 
-                    C.lang.reflect.inspect(dependencies));
-            stack.push(dependencies);
+        length = params.length;
+        for (index = 0; index < length; ++ index) {
+            dependencies = dependencies.concat(
+                Condotti.modules[params[index]].meta.requires
+            );
         }
-        C.lang.nextTick(next);
-    };
-    
-    filter = function (modules) {
-        var unique = {},
-            result = [];
-            
-        modules.forEach(function (module, index) {
-            if ((module in C.loaded_) || (module in unique)) {
-                return true;
-            }
-            unique[module] = true;
-            result.push(module);
-        });
         
-        return result;
-    };
-    
-    next = function () {
-        var filtered = null;
-        
-        requires = stack.shift();
-        if (!requires) {
-            C.debug('Modules ' + C.lang.reflect.inspect(params) + 
-                    ' and their dependencies have been successfully loaded.');
-            
-            try {
-                C.attach_(params); // attach the initial required modules
-                callback(null, C);
-            } catch (e) {
-                callback(e, C);
-            }
+        params = C.filter_(dependencies, Condotti.modules);
+        if (!params.length) {
+            callback();
             return;
         }
         
-        if (!requires.length) {
-            C.warn('No module is expected to be loaded in this round');
-            C.lang.nextTick(next);
-            return;
-        }
-        
-        C.debug('Modules ' + C.lang.reflect.inspect(requires) + 
-                ' are expected to be loaded during this round');
-        
-        filtered = filter(requires);
-        if (!filtered.length) {
-            C.debug('However, all of them have already been loaded before, ' +
-                    'nothing need to be done in this round');
-            C.lang.nextTick(next);
-            return;
-        }
-        
-        requires = filtered;
-        C.debug('But only modules ' + C.lang.reflect.inspect(requires) +
-                ' need to be loaded via the loader after filtering');
         C.lang.nextTick(function () {
-            // load all the required modules
-            C.loader_.require(requires, done);
+            C.loader_.require(params, next);
         });
-    };
-    
-    C.lang.nextTick(next);
+    });
     
     return C;
 };
+
+/**
+ * Return the unique names of the modules that have not been loaded yet.
+ * 
+ * @method filter_
+ * @param {Array} names the list of names to be filtered
+ * @param {Object} exceptions the collection of names should be excluded during
+ *                            this filtering
+ * @return {Array} the filtered names
+ */
+Condotti.prototype.filter_ = function filter_(names, exceptions) {
+    var C = this,
+        unique = {},
+        result = [],
+        index = 0,
+        length = 0,
+        name = null;
+    
+    length = names.length;
+    for (index = 0; index < length; ++ index) {
+        name = names[index];
+        if ((name in exceptions) || (name in unique)) continue;
+        unique[name] = index;
+        result.push(name);
+    }
+    
+    return result;
+};
+
 
 /**
  * Calculate the dependencies of a specified module, and save the dependency
@@ -381,73 +278,49 @@ Condotti.prototype.use = function () {
  * @method calculate_
  * @param {String} name the module name to be calculated
  */
-Condotti.prototype.calculate_ = function (name) {
+Condotti.prototype.calculate_ = function calculate_(name) {
     var C = this,
-        trace = {},
-        unique = {},
-        dependencies = [];
-        
-    /**
-     * some day maybe we have to convert the recursive calls to 
-     * iterative calls
-     */
-    (function (current) {
-        var requires = null,
-            index = 0,
-            length = 0;
-        
-        C.debug('Calculating module ' + current + ' ...');
-        
-        if (!(current in C.loaded_)) {
-            C.debug('Module to be attached [' + current + 
-                    '] has not been loaded.');
-            throw new C.errors.ModuleNotLoadedError(current);
-        }
-        
-        if (current in unique) {
-            C.debug('Module ' + current + ' has already been calculated.');
-            return;
-        }
-        
-        if (current in trace) {
-            C.debug('Circular dependency on module ' + current + 
-                    ' has been detected.');
-            throw new C.errors.CircularDependencyError(name, current);
-        }
-        
-        trace[current] = true;
-            
-        requires = C.loaded_[current].meta.requires || [];
-        length = requires.length;
-        if (0 === length) {
-            C.debug('Module ' + current + ' does not depend on other modules');
-        } else {
-            C.debug('Dependencies of module ' + current + 
-                    C.lang.reflect.inspect(requires) + 
-                    ' are gonna be calculated.');
-        
-            for (index = 0; index < length; index += 1) {
-                arguments.callee(requires[index]);
-            }
-        }
-        
-        
-        C.debug('Module ' + current + ' has been successfully calculated.');
-        delete trace[current];
-        
-        dependencies.push(current);
-        unique[current] = true;
-        
-    })(name);
+        colors = {},
+        BLACK = 0,
+        GREY = 1,
+        stack = [],
+        result = [],
+        index = 0,
+        requires = null;
+        require = null;
     
-    if (dependencies.length) {
-        C.debug('The dependencies of module ' + name + ' are: ' + 
-                C.lang.reflect.inspect(dependencies));
-    } else {
-        C.debug('Module ' + name + ' does not depend on other modules');
+    if (name in C.dependencies_) return C.dependencies_[name];
+    
+    stack.unshift(name);
+    while (stack.length) {
+        current = stack[0];
+        
+        if (current in colors) {
+            stack.shift();
+            if (BLACK === colors[current]) continue; // module current has been 
+                                                     // processed somewhere else
+            
+            colors[current] = BLACK;
+            C.dependencies_[current] = C.lang.clone(result);
+            result.push(current);
+            continue;
+        }
+        
+        colors[current] = GREY;
+        requires = Condotti.modules[current].meta.requires || [];
+        for (index = requires.length - 1; index >= 0; -- index) {
+            require = requires[index];
+            if (colors[require] === GREY)
+                throw new C.errors.CircularDependencyError(name, require);
+            else if (colors[require] === BLACK)
+                continue;
+            
+            stack.unshift(require);
+        }
     }
     
-    C.dependencies_[name] = dependencies;
+    result.push(name); // include itself
+    C.dependencies_[name] = result;
 };
 
 /**
@@ -459,66 +332,37 @@ Condotti.prototype.calculate_ = function (name) {
  * @param {Array} names the arrray of module names to be attached to the 
  *                        Condotti instances
  */
-Condotti.prototype.attach_ = function (names) {
+Condotti.prototype.attach_ = function attach_(names) {
     var index = 0,
-        length = names.length,
+        length = 0,
         name = null,
         C = this,
         fn = null,
         stack = [];
     
-    // set a dummy debug function when attaching modules before the logging
-    // module is successfully attached
-    C.debug = C.debug || function () {};
-    C.lang = C.lang || { reflect: { inspect: function () {
-        return ''; // dummy inspect function for temparary usage 
-    }} };
-    
-    for (index = 0; index < length; index += 1) {
+    for (index = names.length - 1; index >= 0; -- index) {
         name = names[index];
-        if (name in C.attached_) {
-            C.debug('Module ' + name + ' has already been attached.');
-            continue;
-        }
+        if (name in C.attached_) continue;
         
-        if (!(name in C.dependencies_)) {
-            C.debug('Module ' + name + ' has not been calculated yet.');
-            C.calculate_(name);
-        }
-        
+        if (!name in C.dependencies_) C.calculate_(name);
         stack = stack.concat(C.dependencies_[name]);
     }
     
-    C.debug('Modules to be attached before filter: ' + 
-            C.lang.reflect.inspect(stack));
     length = stack.length;
-    for (index = 0; index < length; index += 1) {
+    for (index = 0; index < length; ++ index) {
         name = stack[index];
-        if (name in C.attached_) {
-            C.debug('Module ' + name + ' has already been attached.');
-            continue;
-        }
+        if (name in C.attached_) continue;
         
-        fn = C.loaded_[name].fn;
+        fn = Condotti.modules[name].fn;
         try {
-            C.debug(
-                'Attaching module ' + name + 
-                (C.config_[name] ? 
-                 ' with configure: ' + C.lang.reflect.inspect(C.config_[name]) : 
-                 ''
-                )
-            );
             //     (this, C, config for the module)
             fn.call(C,    C, C.config_[name]); // make `this` === C in order to
                                                // load some external modules, 
                                                // such as the async module into 
                                                // C
             C.attached_[name] = true;
-            C.debug('Module ' + name + ' is attached successfully.');
         } catch (e) {
-            C.debug('Module ' + name + ' is failed to be attached. Error: ' + 
-                    C.lang.reflect.inspect(e));
-            throw new C.errors.ModuleAttachError(C.loaded_[name], e);
+            throw new C.errors.ModuleAttachError(Condotti.modules[name], e);
         }
     }
     

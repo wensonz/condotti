@@ -6,26 +6,7 @@
  */
 Condotti.add('condotti.lang', function (C) {
     
-    /**
-     * The class version of the original 'lang' namespace, so that the default
-     * behaviours can be changed in the child classes, which is normally occurs
-     * when the detail implementation requires, for example, the node.js version
-     * of inspect supports the Buffer class that is not in the default
-     * implementation.
-     *
-     * @class Language
-     * @constructor
-     */
-    function Language () {
-        /**
-         * The global console instance
-         *
-         * @property console
-         * @type Object
-         */
-        this.console = console;
-        
-    }
+    var L = C.namespace('lang');
     
     /**
      * Inherit the prototype methods from one constructor into another.
@@ -38,7 +19,7 @@ Condotti.add('condotti.lang', function (C) {
      * @param {Function} child the child constructor to inherit to
      * @param {Function} parent the parent constructor to inherit from
      */
-    Language.prototype.inherit = function (child, parent) {
+    L.inherit = function (child, parent) {
         /**
          * This helper function is used to invoke the constructor of the parent
          * class when initializing an instance of the child class. This method
@@ -61,104 +42,62 @@ Condotti.add('condotti.lang', function (C) {
                 c.super_.apply(this, arguments);
             }
         };
-        child.super_ = parent;
         
-        if (Object.create) { // borrowed from the `util` module from node.js
-            child.prototype = Object.create(parent.prototype, {
-                constructor: {
-                    value: child,
-                    enumerable: false,
-                    writable: true,
-                    configurable: true
-                },
-                super: {
-                    value: super_,
-                    enumerable: false,
-                    writable: false,
-                    configurable: true
-                }
-            });
-        } else { // borrowed from the `extend` function of the book
-                 // `Pro Javascript Design Patterns`
-            var F = function () {};
-            F.prototype = parent.prototype;
-            child.prototype = new F();
-            child.prototype.constructor = child;
-            child.prototype.super = super_;
-        }
+        child.super_ = parent;
+        child.prototype = Object.create(parent.prototype, {
+            constructor: {
+                value: child,
+                enumerable: false,
+                writable: true,
+                configurable: true
+            },
+            super: {
+                value: super_,
+                enumerable: false,
+                writable: false,
+                configurable: true
+            }
+        });
     };
     
     /**
      * Merge the list of objects starting from 2nd to the 1st one.
      *
      * @method merge
-     * @param {Object} to the object to be merged to
-     * @param {Object} from* 1-n objects to merge from
-     * @param {Boolean} overwritten if the data from latter object can overwrite
-     *                              the one from the formmer one when conflict
-     *                              is detected.
+     * @param {Object} target the target object to merge to
+     * @param {Object} source the source object to merge
      */
-    Language.prototype.merge = function () {
-        var params = Array.prototype.slice.call(arguments, 0),
-            target = null,
-            last = null,
-            overwritten = true;
+    L.merge = function (target, source) {
+        var key = null,
+            value = null,
+            stack = [];
         
-        if (params.length <= 1) {
-            return;
+        if (overwritten === undefined) {
+            overwritten = true; // overwritten by default
         }
         
-        target = params.shift();
-        last = params[params.length - 1];
-        if (Boolean === C.lang.reflect.getObjectType(last)) {
-            overwritten = params.pop();
-        }
+        stack.push(target, source);
         
-        params.forEach(function (param, index) {
-            var stack = [],
-                frame = { path: 'ROOT', target: target, source: param },
-                key = null,
-                value = null;
+        while (stack.length) {
+            target = stack.shift();
+            source = stack.shift();
             
-            while (frame) {
-                for (key in frame.source) {
-                    if (!frame.source.hasOwnProperty(key)) {
-                        continue;
-                    }
+            for (key in source) {
+                if (!source.hasOwnProperty(key)) continue;
+                
+                value = source[key];
+                if (!(target.hasOwnProperty(key) && 
+                      C.lang.isPlainObject(value) &&
+                      C.lang.isPlainObject(target[key]))) {
                     
-                    value = frame.source[key];
-                    
-                    if (!frame.target.hasOwnProperty(key)) {
-                        frame.target[key] = value;
-                        continue;
-                    }
-                    
-                    if (C.lang.reflect.isPlainObject(value) && 
-                        C.lang.reflect.isPlainObject(frame.target[key])) {
-                        stack.push({ 
-                            path: frame.path + '.' + key, 
-                            target: frame.target[key], 
-                            source: value 
-                        });
-                        continue;
-                    }
-                    
-                    if (!overwritten) {
-                        throw new Error('Confliction has been detected on ' +
-                                        'property ' + frame.path + 
-                                        ' when merging the ' + (index + 1) + 
-                                        'th param into the target');
-                    }
-                    
-                    // Overwrite
-                    frame.target[key] = value;
+                    target[key] = value;
+                    continue;
                 }
                 
-                frame = stack.pop(); // deep first search to ensure that the
-                                     // values in later object will absolutely
-                                     // overwrite the ones in previous objects
+                
+                stack.push(target[key], value);
             }
-        });
+        }
     };
     
     /**
@@ -167,7 +106,7 @@ Condotti.add('condotti.lang', function (C) {
      * @method nextTick
      * @param {Function} callback the callback function to be invoked on next tick
      */
-    Language.prototype.nextTick = function(callback) {
+    L.nextTick = function(callback) {
         setTimeout(callback, 0); // default version
     };
     
@@ -179,11 +118,10 @@ Condotti.add('condotti.lang', function (C) {
      * @param {Function} callback the function to be made async
      * @return {Function} the created wrapper function
      */
-    Language.prototype.async = function(callback) {
-        var self = this;
+    L.async = function(callback) {
         return function () {
             var params = Array.prototype.slice.call(arguments, 0);
-            self.nextTick(function () {
+            L.nextTick(function () {
                 callback.apply(null, params);
             });
         };
@@ -197,32 +135,174 @@ Condotti.add('condotti.lang', function (C) {
      * @param {Boolean} deep deep copy or not, which is false by default
      * @return the cloned object
      */
-    Language.prototype.clone = function(source, deep) {
-        /*
-        // now deep copy is not supported
-        var cloned = null,
-            key = null;
-        
-        // TODO: support other data types and deep copy
-        if ('object' !== typeof source) {
-            throw new TypeError('Method \'clone\' only clones objects, ' +
-                                'but not ' + typeof source);
-        }
-        
-        cloned = {};
-        for (key in source) {
-            if (source.hasOwnProperty(key)) {
-                cloned[key] = source[key];
-            }
-        }
-        
-        return cloned;
-        */
-        
+    L.clone = function(source, deep) {
         // TODO: implement a more effective one
         return JSON.parse(JSON.stringify(source));
     };
     
-    C.lang = new Language();
+    
+    
+    /**
+     * Return if the passed in object is a function
+     *
+     * @method isFunction
+     * @param {Object} object the object to be tested
+     * @return {Boolean} true if the object is a function, otherwise false
+     */
+    L.isFunction = function isFunction(object) {
+        return object && object.constructor === Function;
+    };
+    
+    /**
+     * Return if the passed in param is a plain object that is created via "{}"
+     * or "new Object". Forked from jquery.
+     *
+     * @method isPlainObject
+     * @param {Object} object the object to be tested
+     * @return {Boolean} true if the object is a plain object, otherwise false
+     *                   is returned.
+     */
+    L.isPlainObject = function isPlainObject(object) {
+        
+        if (!object || L.getObjectType(object) !== Object) {
+            return false;
+        }
+        
+        try {
+            if (object.constructor && 
+                !Object.prototype.hasOwnProperty.call(object, 'constructor') &&
+                !Object.prototype.hasOwnProperty.call(
+                    object.constructor.prototype, 'isPrototypeOf'
+                )) {
+                return false;
+            }
+        } catch (e) {
+            return false;
+        }
+        
+        for (var key in object) {}
+        
+        return key === undefined || 
+               Object.prototype.hasOwnProperty.call(object, key);
+    };
+    
+    /**
+     * Return if the first passed in class object is direct or indirect subclass
+     * of the second one.
+     *
+     * @method isSubClass
+     * @param {Function} descendent the descendent class constructor to be tested
+     * @param {Function} ancestor the ancestor class constructor
+     * @return {Boolean} true if the descendent is sub class of the ancestor,
+     *                   otherwise false is returned
+     */
+    L.isSubClass = function isSubClass(descendent, ancestor) {
+        var c = descendent;
+        
+        if (Object === ancestor) { // everything is an object
+            return true;
+        }
+        
+        while (c && c !== ancestor) {
+            c = (L.isFunction(c.super_) ? c.super_ : null);
+        }
+        
+        return !!c;
+    };
+    
+    /**
+     * Inspect the passed in object into its string form
+     *
+     * @method inspect
+     * @param {Object} object the object to be inspected into
+     * @return {String} the string form of the passed in object
+     */
+    L.inspect = function inspect(object) {
+        var type = L.getObjectType(object),
+            name = L.getFunctionName(type),
+            data = null,
+            key = null,
+            value = null,
+            length = 0;
+            
+        if (name in { 'Number': 1, 'Boolean': 1, 'Date': 1 }) {
+            return object.toString();
+        } else if ('String' === name) {
+            return '"' + object + '"';
+        } else if (undefined === object) {
+            return 'undefined';
+            // return '<Undefined>';
+        } else if (null === object) {
+            return 'null';
+            // return '<Object: null>';
+        } else if (object instanceof Error) {
+            return object.name + ': ' + object.message;
+        } else if (Function === type) {
+            return L.getFunctionName(object) + '()';
+        } else if (Array === type) {
+            if (object.length > 0) {
+                data = object.map(function (item) { 
+                    return L.inspect(item);
+                }).join(', ');
+                return '[' + data + ']';
+            }
+            return '[]';
+        } else if (Object === type) {
+            data = data || [];
+            
+            for (key in object) {
+                if (object.hasOwnProperty(key)) {
+                    length += 1;
+                    value = object[key];
+                    data.push('"' + key + '": ' + this.inspect(value));
+                }
+            }
+            return '{' + data.join(', ') + '}';
+        }
+        
+        // fall default
+        return name + ': ' + object.toString();
+    };
+    
+    /**
+     * Return the function name. If it is an anonymous function, 'anonymous'
+     * is returned.
+     *
+     * @method getFunctionName
+     * @param {Function} func the function whose name is to be returned
+     * @return {String} name of the function. If the name could not be found, 
+     *                  'anonymous' is returned.
+     */
+    L.getFunctionName = function getFunctionName(func) {
+        if (undefined === func) {
+            return 'Undefined';
+        } else if (null === func) {
+            return 'Null';
+        }
+        return func.name || 
+               func.toString().match(/function\s*([^(]*)\s*\([^)]*\)/)[1] ||
+               'anonymous';
+    };
+    
+    /**
+     * Return the type of the passed in object. Usually the result is the 
+     * function which constructs it. 'undefined' and 'null' are both supported.
+     *
+     * @method getObjectType
+     * @param {Object} object the object whose type will be returned
+     * @return {Function} the type of the object. If the passed in object is
+     *                    undefined, then undefined is returned, or if the 
+     *                    object is null, then Object is returned.
+     */
+    L.getObjectType = function getObjectType(object) {
+        if (undefined === object) {
+            return undefined;
+        } else if (null === object) {
+            return Object;
+        }
+        
+        return object.constructor;
+    };
+    
     
 }, '0.0.1', {});

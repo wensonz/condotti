@@ -7,7 +7,6 @@
  * @module condotti.server.loader
  */
 Condotti.add('condotti.server.loader', function (C) {
-    //
     /**
      * This Loader class is designed to load modules for Condotti framework
      * under the node.js environment. It follows the same strategy as the one of

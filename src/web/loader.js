@@ -165,29 +165,18 @@ Condotti.add('condotti.web.loader', function (C) {
         // TODO: param validations
         C.async.forEach(names, function (name, next) {
             var url = self.normalize_(name);
-            
             C.$.get(url, function (script) {
-                
-                if (!scripts[name]) {
-                    scripts[name] = script;
-                }
-                
+                scripts[name] = script;
                 next();
             }, 'html')
-            /*.done(function (script) {
-                
-                if (!scripts[name]) {
-                    scripts[name] = script;
-                }
-                
-                next();
-            })*/.error(function (jqXHR, status, error) {
+            .error(function (jqXHR, status, error) {
                 self.logger_.debug('Fetching module ' + name + ' from ' + url +
                                    ' failed. Error: ' + error + ', status: ' +
                                    jqXHR.status);
                 
-                next(new C.errors.ModuleRequireFailedError(name, 
-                                                           new Error(error)));
+                next(new C.errors.ModuleRequireFailedError(
+                    name, new Error(error)
+                ));
             });
         
         }, function (error) {
@@ -253,8 +242,7 @@ Condotti.add('condotti.web.loader', function (C) {
         return url;
     };
     
-    C.namespace('loaders').Loader = Loader;
+    C.namespace('loader').Loader = Loader;
     
-}, '0.0.1', { requires: ['condotti.lang', 'condotti.reflect',
-                         'condotti.errors', 'condotti.async', 
+}, '0.0.1', { requires: ['condotti.lang','condotti.errors', 'condotti.async', 
                          'condotti.web.core']});

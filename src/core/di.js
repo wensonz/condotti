@@ -17,21 +17,20 @@ Condotti.add('condotti.di', function (C) {
      * @param {Object} config the config for this dotti factory
      * @param {String} id the identifier of this factory instance in itself
      */
-    function DottiFactory (config, id) {
+    function DottiFactory (config) {
         /**
          * The config object for this dotti factory.
          *
          * {
          *     "objectA": {
          *         "type": "typeA",
-         *         "params": {
-         *             1: { "reference": "objectB" },
-         *             2: { "value": "this is a normal string param" },
-         *             3: {
-         *                 "type": "Date", 
-         *                 "value": "Tue Mar 26 2013 15:29:32 GMT+0800 (CST)"
-         *             }
-         *         }
+         *         "params": [
+         *             "$objectB",
+         *             { "xxx": "$objectC" },
+         *             [
+         *                 "$objectD", "$objectE"
+         *             ]
+         *         ]
          *     }
          * }
          * 
@@ -39,15 +38,6 @@ Condotti.add('condotti.di', function (C) {
          * @type Object
          */
         this.config_ = config;
-        
-        /**
-         * The identifier of this factory instance in itself
-         * 
-         * @property id_
-         * @type String
-         * @default 'dotti'
-         */
-        this.id_ = id || 'dotti';
         
         /**
          * The logger instance
@@ -65,9 +55,6 @@ Condotti.add('condotti.di', function (C) {
          * @deafult {}
          */
         this.cache_ = {};
-        
-        /* initialize */
-        this.set(this.id_, this);
     }
     
     /**
@@ -86,11 +73,10 @@ Condotti.add('condotti.di', function (C) {
             next = null,
             self = this;
             
-        if (!this.cache_.hasOwnProperty(name)) {
+        if (!name in this.cache_) {
+            this.create_(name);
             
             if (!this.config_[name]) {
-                this.logger_.warn('Configuration for object ' + name + 
-                                  ' does not exist');
                 this.cache_[name] = null;
                 return null;
             }
@@ -124,14 +110,6 @@ Condotti.add('condotti.di', function (C) {
                     return params[name].reference;
                 });
             };
-            // TODO: add logging here
-            dependencies = C.algorithm.sorting.topology(name, next);
-            
-            dependencies.forEach(function (dependency) {
-                if (!self.cache_.hasOwnProperty(dependency)) {
-                    self.create_(dependency);
-                }
-            });
         }
         
         return this.cache_[name];
@@ -189,24 +167,14 @@ Condotti.add('condotti.di', function (C) {
             params = [],
             config = null,
             self = this,
-            message = null;
+            message = null,
+            dependencies = {};
         
         config = this.config_[name];
         if (!config) {
-            this.logger_.warn('Configuration for object ' + name + 
-                              ' does not exist');
-            this.cache_[name] = null;
-            return;
+            return null;
         }
-        // TODO: 1. check if config exists
-        //       2. add native type support
-        /*
-        if (config.native) {
-            // TODO: create object of native types
-        }
-        */
         
-        // TODO: check if config.type exists
         try {
             type = C.namespace(config.type);
         } catch (e) {

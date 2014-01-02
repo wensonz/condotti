@@ -224,7 +224,7 @@ Condotti.add('condotti.logging', function (C, config) {
     L.getFunctionLogger = function (func) {
         return func.logger_ || 
                (func.logger_ = C.logging.getLogger(
-                   C.lang.reflect.getFunctionName(func)
+                   C.lang.getFunctionName(func)
                ));
     };
     /**
@@ -235,7 +235,7 @@ Condotti.add('condotti.logging', function (C, config) {
      * @return {Logger} the logger object for the type of this object
      */
     L.getObjectLogger = function (object) {
-        return C.logging.getFunctionLogger(C.lang.reflect.getObjectType(object));
+        return C.logging.getFunctionLogger(C.lang.getObjectType(object));
     };
     
     
@@ -257,7 +257,7 @@ Condotti.add('condotti.logging', function (C, config) {
             var value = prototype[name],
                 wrapped = null;
             
-            if (!C.lang.reflect.isFunction(value)) {
+            if (!C.lang.isFunction(value)) {
                 return true;
             }
             
@@ -289,114 +289,6 @@ Condotti.add('condotti.logging', function (C, config) {
             
             func.prototype[name].traced_ = true;
         });
-    };
-    
-    /**
-     * Add couples of logging utility functions to the Condotti instance.
-     * If the logger has not been created successfully, the message will 
-     * be discarded silently.
-     *
-     * @method fatal/error/warn/info/debug/trace
-     * @param {String} message the message to be logged
-     * @return {Condotti} the calling Condotti instance
-     */
-    ['fatal', 'error', 'warn', 'info', 'debug', 'trace'].forEach( 
-        function (name, index) {
-           C[name] = function (message) {
-               if (C.logger_ && C.logger_[name]) {
-                   C.logger_[name](message);
-               }
-           };
-           return true;
-        }
-    );
-    
-    /**
-     * This StepLogger class is designed as a helper, and provides the facility
-     * to log the begin, end of a step with the specified message. If the step
-     * ends with an error, the logger is to log the error details. On the other
-     * hand, if the step succeeds, it will log down the result too.
-     * 
-     * @class StepLogger
-     * @constructor
-     * @param {Logger} logger the logger instance used to complete the logging
-     */
-    function StepLogger (logger) {
-        /**
-         * The id of the step
-         *
-         * @property id_
-         * @type String
-         * @default null
-         */
-        this.id_ = null;
-
-        /**
-         * The logger instance to complete the logging functionality
-         * 
-         * @property logger_
-         * @type Logger
-         */
-        this.logger_ = logger;
-    }
-    
-    /**
-     * Log the begin of a step with the specified message
-     * 
-     * @method start
-     * @param {String} message the descriptive message about the step
-     */
-    StepLogger.prototype.start = function (message) {
-        var tokens = null;
-        tokens = C.uuid.v4().split('-');
-        this.id_ = tokens[0] + '-' + tokens[tokens.length - 1];
-
-        this.logger_.debug('[' + this.id_ + '] [ START ] ' + message + ' ...');
-    };
-    
-    /**
-     * Log the end of a successful step with the result.
-     * 
-     * @method done
-     * @param {Object} result the result of the successful step. It can be null
-     *                        or undefined.
-     */
-    StepLogger.prototype.done = function (result) {
-        var message = null;
-
-        if (!this.id_) {
-            return;
-        }
-
-        message = '[' + this.id_ + '] [ OK ]';
-        this.id_ = null;
-
-        if (result) {
-            message += ' Result: ' + C.lang.reflect.inspect(result);
-        }
-        
-        this.logger_.debug(message);
-    };
-    
-    /**
-     * Log the end of a failed step with the passed-in error
-     * 
-     * @method error
-     * @param {Error} error the error causes this step fail
-     */
-    StepLogger.prototype.error = function (error) {
-        if (!this.id_) {
-            return;
-        }
-        
-        this.logger_.error('[' + this.id_ + '] [ !! ] Error: ' + 
-                           C.lang.reflect.inspect(error));
-        this.id_ = null;
-    };
-    
-    L.StepLogger = StepLogger;
-    L.getStepLogger = function (logger) {
-        return new StepLogger(logger);
     };
     
 }, '0.0.1', { requires: ['condotti.lang', 'condotti.errors'] });

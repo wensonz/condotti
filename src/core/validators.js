@@ -394,27 +394,6 @@ Condotti.add('condotti.validators', function (C) {
     
     C.namespace('validators').ObjectValidator = ObjectValidator;
     
-    /**
-     * This kind of error is to be thrown when validation failed.
-     * 
-     * @class ValidationFailedError
-     * @constructor
-     * @extends Error
-     * @param {String} message the error message
-     */
-    function ValidationFailedError (message) {
-        /* inheritance */
-        this.super();
-        
-        this.name = 'ValidationFailedError';
-        this.message = message;
-    }
-    
-    C.lang.inherit(ValidationFailedError, Error);
-    
-    C.namespace('errors').ValidationFailedError = ValidationFailedError;
-    
 
-}, '0.0.1', { requires: [
-    'condotti.lang', 'condotti.reflect', 'condotti.errors', 'condotti.logging'
-] });
+}, '0.0.1', { requires: ['condotti.lang', 'condotti.errors', 
+                         'condotti.logging'] });
