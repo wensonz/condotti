@@ -252,7 +252,7 @@ Condotti.add('condotti.uuid', function (C) {
   }
 }).call(this);
 
-if (module && module.exports) {
+if (typeof(module) !== 'undefined' && module.exports) {
     C.uuid = module.exports;
 }
 

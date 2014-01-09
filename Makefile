@@ -2,12 +2,12 @@
 SRC = src
 
 CONDOTTI = \
-	"$(SRC)/condotti/condotti.js" \
-	"$(SRC)/condotti/lang.js" \
-	"$(SRC)/condotti/async.js" \
-	"$(SRC)/condotti/errors.js" \
-	"$(SRC)/condotti/logging.js" \
-	"$(SRC)/condotti/uuid.js"
+	"$(SRC)/core/condotti.js" \
+	"$(SRC)/core/lang.js" \
+	"$(SRC)/core/async.js" \
+	"$(SRC)/core/errors.js" \
+	"$(SRC)/core/logging.js" \
+	"$(SRC)/core/uuid.js"
 
 WEB = \
 	"$(SRC)/web/core.js" \

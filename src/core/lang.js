@@ -37,7 +37,12 @@ Condotti.add('condotti.lang', function (C) {
             while (c && (c !== arguments.callee.caller)) {
                 c = c.super_;
             }
-            /* apply the constructor to current instance */
+            
+            // Return the super constructor if no argument is provided
+            if (!arguments.length)
+                return c & c.super_;
+            
+            // apply the constructor to current instance
             if (c && c.super_) {
                 c.super_.apply(this, arguments);
             }

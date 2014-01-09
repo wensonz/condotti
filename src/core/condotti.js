@@ -151,7 +151,7 @@ Condotti.prototype.namespace = function namespace(namespace, create) {
     for (index = 0; index < length; index += 1) {
         
         token = tokens[index];
-        if (!(create or token in current)) {
+        if (!(create || token in current)) {
             throw new TypeError('Object of namespace ' + 
                                 tokens.slice(0, index + 1).join('.') + 
                                 ' can not be found');
@@ -187,26 +187,35 @@ Condotti.prototype.use = function use() {
                                                            // `arguments` to
                                                            // array
         callback = null,
+        names = null,
         C = this;
     
     
     if (!params.length) return;
     
     callback = function () {}; // by default a dummy function to call
-    if (C.lang.isFunction(params[length - 1])) {
+    if (C.lang.isFunction(params[params.length - 1])) {
         callback = C.lang.async(params.pop()); // remove the callback from 
                                                // module list
     }
     
-    if (!params.length) return;
+    if (!params.length) {
+        callback(null, C);
+        return;
+    }
     
     if (Array.isArray(params[0])) {
         params = params[0]; // only two scenarios are supported: 
                             // use([m1, m2], cb) or use(m1, m2, cb)
     }
     
+    names = params;
     params = C.filter_(params, Condotti.modules);
-    if (!params.length) return;
+    if (!params.length) {
+        C.attach_(names); 
+        callback(null, C);
+        return;
+    }
     
     C.loader_.require(params, function next(error) {
         var dependencies = [],
@@ -214,20 +223,21 @@ Condotti.prototype.use = function use() {
             length = 0;
         
         if (error) {
-            callback(error);
+            callback(error, C);
             return;
         }
         
         length = params.length;
         for (index = 0; index < length; ++ index) {
             dependencies = dependencies.concat(
-                Condotti.modules[params[index]].meta.requires
+                Condotti.modules[params[index]].meta.requires || []
             );
         }
         
         params = C.filter_(dependencies, Condotti.modules);
         if (!params.length) {
-            callback();
+            C.attach_(names);
+            callback(null, C);
             return;
         }
         
@@ -301,7 +311,7 @@ Condotti.prototype.calculate_ = function calculate_(name) {
                                                      // processed somewhere else
             
             colors[current] = BLACK;
-            C.dependencies_[current] = C.lang.clone(result);
+            C.dependencies_[current] = JSON.parse(JSON.stringify(result));
             result.push(current);
             continue;
         }
@@ -319,7 +329,6 @@ Condotti.prototype.calculate_ = function calculate_(name) {
         }
     }
     
-    result.push(name); // include itself
     C.dependencies_[name] = result;
 };
 
@@ -344,7 +353,7 @@ Condotti.prototype.attach_ = function attach_(names) {
         name = names[index];
         if (name in C.attached_) continue;
         
-        if (!name in C.dependencies_) C.calculate_(name);
+        if (!(name in C.dependencies_)) C.calculate_(name);
         stack = stack.concat(C.dependencies_[name]);
     }
     
